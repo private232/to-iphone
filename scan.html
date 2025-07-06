@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6C5CE7;
+            --secondary-color: #A29BFE;
+            --dark-color: #2D3436;
+            --light-color: #F5F6FA;
+            --accent-color: #00CE9F;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: black;
+            min-height: 100vh;
+            color: white;
+        }
+
+        .qr-scanner-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .qr-scanner-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            z-index: 1001;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .qr-scanner-video {
+            flex: 1;
+            width: 100%;
+            object-fit: cover;
+        }
+
+        .qr-scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 4px solid var(--accent-color);
+            border-radius: 15px;
+            z-index: 1001;
+        }
+
+        .qr-scanner-instruction {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 20px;
+            margin: 0 40px;
+            z-index: 1001;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 480px) {
+            .qr-scanner-overlay {
+                width: 200px;
+                height: 200px;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="qr-scanner-container">
+        <div class="qr-scanner-header">
+            <button class="back-btn" id="close-scanner">
+                <i class="material-icons">arrow_back</i>
+            </button>
+            <h1>QR Scanner</h1>
+        </div>
+        <video id="qr-video" class="qr-scanner-video" playsinline></video>
+        <div class="qr-scanner-overlay"></div>
+        <div class="qr-scanner-instruction">ضع رمز QR داخل الإطار للمسح الضوئي</div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: 'AIzaSyCQd2QmmDl7dTW9xgurON5uiOp5rTn0S_c',
+            authDomain: 'points-d6cfb.firebaseapp.com',
+            projectId: 'points-d6cfb',
+            storageBucket: 'points-d6cfb.firebasestorage.app',
+            messagingSenderId: '832909125676',
+            appId: '1:832909125676:web:7dcc2e47ad16657cf9c989',
+            measurementId: 'G-XL96X9KSMZ',
+            databaseURL: 'https://points-d6cfb-default-rtdb.firebaseio.com/'
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // DOM Elements
+        const qrVideo = document.getElementById('qr-video');
+        const closeScannerBtn = document.getElementById('close-scanner');
+        const qrScannerInstruction = document.querySelector('.qr-scanner-instruction');
+
+        // QR Scanner Variables
+        let qrScannerActive = false;
+        let videoStream = null;
+        let processingQR = false;
+
+        // Back to main page
+        closeScannerBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        // Start QR scanner when page loads
+        window.addEventListener('load', startQRScanner);
+
+        async function startQRScanner() {
+            qrScannerActive = true;
+            processingQR = false;
+
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                qrVideo.srcObject = videoStream;
+                qrVideo.play();
+                requestAnimationFrame(scanQRCode);
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                showMessage('لا يمكن الوصول إلى الكاميرا', true);
+                stopQRScanner();
+            }
+        }
+
+        function stopQRScanner() {
+            qrScannerActive = false;
+            
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            
+            qrVideo.srcObject = null;
+        }
+
+        function showMessage(message, isError = false) {
+            qrScannerInstruction.textContent = message;
+            qrScannerInstruction.style.color = isError ? 'red' : 'white';
+            
+            if (!isError) {
+                setTimeout(() => {
+                    qrScannerInstruction.textContent = 'ضع رمز QR داخل الإطار للمسح الضوئي';
+                    qrScannerInstruction.style.color = 'white';
+                }, 3000);
+            }
+        }
+
+        async function scanQRCode() {
+            if (!qrScannerActive || processingQR) {
+                return;
+            }
+
+            if (qrVideo.readyState === qrVideo.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement('canvas');
+                canvas.width = qrVideo.videoWidth;
+                canvas.height = qrVideo.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(qrVideo, 0, 0, canvas.width, canvas.height);
+                
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        processingQR = true;
+                        showMessage('جاري معالجة رمز الاستجابة السريعة...');
+                        await processQRCode(code.data);
+                        processingQR = false;
+                    }
+                } catch (err) {
+                    console.error('QR scanning error:', err);
+                }
+            }
+
+            if (qrScannerActive) {
+                requestAnimationFrame(scanQRCode);
+            }
+        }
+
+        async function processQRCode(qrData) {
+            try {
+                const qrRef = database.ref('qr_codes/' + qrData);
+                const snapshot = await qrRef.get();
+                
+                if (!snapshot.exists()) {
+                    showMessage('رمز QR غير صالح', true);
+                    return;
+                }
+
+                const qrDataMap = snapshot.val();
+                if (qrDataMap.isUsed) {
+                    showMessage('تم استخدام هذا الكود من قبل', true);
+                    return;
+                }
+
+                const points = qrDataMap.points || 0;
+                const user = auth.currentUser;
+                if (!user) {
+                    showMessage('يجب تسجيل الدخول أولاً', true);
+                    return;
+                }
+
+                // Update user points
+                const userSnapshot = await database.ref('users/' + user.uid + '/marks').get();
+                const currentPoints = userSnapshot.val() || 0;
+                await database.ref('users/' + user.uid + '/marks').set(currentPoints + points);
+
+                // Mark QR as used
+                await qrRef.update({ isUsed: true });
+
+                // Record interaction
+                await database.ref('interactions').push().set({
+                    userId: user.uid,
+                    type: 'qr_scan',
+                    points: points,
+                    timestamp: new Date().toISOString(),
+                    userEmail: user.email || "",
+                    qrCode: qrData
+                });
+
+                showMessage(`تمت إضافة ${points} نقطة إلى رصيدك`);
+                
+                // Close scanner after successful scan
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            } catch (error) {
+                console.error('Error processing QR code:', error);
+                showMessage('حدث خطأ أثناء معالجة رمز QR', true);
+            }
+        }
+    </script>
+</body>
+</html>
