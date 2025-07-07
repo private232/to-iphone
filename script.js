@@ -135,6 +135,9 @@ function loadPosts() {
             const postElement = createPostElement(post);
             postsContainer.appendChild(postElement);
         });
+
+        // Setup image sliders after posts are loaded
+        setupImageSliders();
     });
 }
 
@@ -186,16 +189,143 @@ function createPostElement(post) {
 
 // Create images HTML for post
 function createPostImages(images) {
-    let imagesHTML = '<div class="post-images">';
+    let imagesHTML = `
+        <div class="post-images">
+            <div class="post-images-container" style="width: ${images.length * 100}%">
+    `;
     
     images.forEach((image, index) => {
         imagesHTML += `
-            <img src="data:image/jpeg;base64,${image}" alt="Post image ${index + 1}" class="post-image">
+            <div style="width: 100%; flex-shrink: 0; display: flex; justify-content: center; align-items: center;">
+                <img src="data:image/jpeg;base64,${image}" alt="Post image ${index + 1}" class="post-image" onload="this.style.opacity=1">
+            </div>
         `;
     });
     
-    imagesHTML += '</div>';
+    imagesHTML += `
+            </div>
+            <div class="images-indicator">
+                ${images.map((_, index) => `
+                    <div class="indicator-dot ${index === 0 ? 'active' : ''}" data-index="${index}"></div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
     return imagesHTML;
+}
+
+// Setup image sliders functionality
+function setupImageSliders() {
+    document.querySelectorAll('.post-images').forEach(imagesContainer => {
+        const container = imagesContainer.querySelector('.post-images-container');
+        const dots = imagesContainer.querySelectorAll('.indicator-dot');
+        const imageCount = dots.length;
+        let currentIndex = 0;
+        let startX, moveX;
+        let isDragging = false;
+
+        // Set initial position
+        container.style.transform = `translateX(0)`;
+
+        // Touch events for mobile
+        imagesContainer.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            isDragging = true;
+            container.style.transition = 'none'; // Remove transition during drag
+        });
+
+        imagesContainer.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            moveX = e.touches[0].clientX;
+            const diff = moveX - startX;
+            const translateX = -currentIndex * (100 / imageCount) + (diff / imagesContainer.offsetWidth) * 100;
+            container.style.transform = `translateX(${translateX}%)`;
+        });
+
+        imagesContainer.addEventListener('touchend', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            container.style.transition = 'transform 0.3s ease'; // Restore transition
+            const diff = moveX - startX;
+            
+            if (Math.abs(diff) > 50) {
+                if (diff > 0 && currentIndex > 0) {
+                    // Swipe right
+                    currentIndex--;
+                } else if (diff < 0 && currentIndex < imageCount - 1) {
+                    // Swipe left
+                    currentIndex++;
+                }
+            }
+            
+            updateSliderPosition();
+        });
+
+        // Mouse events for desktop
+        imagesContainer.addEventListener('mousedown', (e) => {
+            startX = e.clientX;
+            isDragging = true;
+            container.style.transition = 'none'; // Remove transition during drag
+            e.preventDefault();
+        });
+
+        imagesContainer.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            moveX = e.clientX;
+            const diff = moveX - startX;
+            const translateX = -currentIndex * (100 / imageCount) + (diff / imagesContainer.offsetWidth) * 100;
+            container.style.transform = `translateX(${translateX}%)`;
+        });
+
+        imagesContainer.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            container.style.transition = 'transform 0.3s ease'; // Restore transition
+            const diff = moveX - startX;
+            
+            if (Math.abs(diff) > 50) {
+                if (diff > 0 && currentIndex > 0) {
+                    // Swipe right
+                    currentIndex--;
+                } else if (diff < 0 && currentIndex < imageCount - 1) {
+                    // Swipe left
+                    currentIndex++;
+                }
+            }
+            
+            updateSliderPosition();
+        });
+
+        imagesContainer.addEventListener('mouseleave', () => {
+            if (isDragging) {
+                isDragging = false;
+                container.style.transition = 'transform 0.3s ease'; // Restore transition
+                updateSliderPosition();
+            }
+        });
+
+        // Dot indicators click
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                currentIndex = index;
+                updateSliderPosition();
+            });
+        });
+
+        function updateSliderPosition() {
+            container.style.transform = `translateX(-${currentIndex * (100 / imageCount)}%)`;
+            
+            // Update dots
+            dots.forEach((dot, index) => {
+                if (index === currentIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+    });
 }
 
 // Format timestamp
@@ -266,3 +396,11 @@ auth.onAuthStateChanged(user => {
         scanBtn.classList.add('hidden');
     }
 });
+
+// Global function to handle image load
+window.onload = function() {
+    // Set opacity to 1 for all images after they load
+    document.querySelectorAll('.post-image').forEach(img => {
+        img.style.opacity = '1';
+    });
+};

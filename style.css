@@ -160,13 +160,54 @@ body {
 }
 
 .post-images {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
     margin-bottom: 15px;
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    max-height: 500px;
+}
+
+.post-images-container {
+    display: flex;
+    transition: transform 0.3s ease;
+    height: 100%;
+    width: 100%;
 }
 
 .post-image {
     width: 100%;
-    border-radius: 10px;
-    margin-bottom: 5px;
+    height: auto;
+    max-height: 500px;
+    object-fit: contain;
+    display: block;
+}
+
+.images-indicator {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+}
+
+.indicator-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.5);
+    transition: all 0.3s;
+}
+
+.indicator-dot.active {
+    background-color: white;
+    transform: scale(1.2);
 }
 
 .post-footer {
@@ -231,6 +272,12 @@ body {
     cursor: pointer;
 }
 
+@media (max-width: 768px) {
+    .post-images {
+        max-height: 400px;
+    }
+}
+
 @media (max-width: 480px) {
     .logo {
         width: 150px;
@@ -243,5 +290,10 @@ body {
     
     .points-value {
         font-size: 28px;
+    }
+
+    .post-images {
+        max-height: 300px;
+        min-height: 150px;
     }
 }
