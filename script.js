@@ -215,46 +215,56 @@ function createPostImages(images) {
     return imagesHTML;
 }
 
-// Setup image sliders functionality
+// Setup image sliders functionality with reversed dots order
 function setupImageSliders() {
     document.querySelectorAll('.post-images').forEach(imagesContainer => {
         const container = imagesContainer.querySelector('.post-images-container');
-        const dots = imagesContainer.querySelectorAll('.indicator-dot');
+        const dotsContainer = imagesContainer.querySelector('.indicators');
+        const dots = Array.from(imagesContainer.querySelectorAll('.indicator-dot'));
         const imageCount = dots.length;
         let currentIndex = 0;
         let startX, moveX;
         let isDragging = false;
 
         // Set initial position
-        container.style.transform = `translateX(0)`;
+        container.style.direction = 'ltr';
+        container.style.display = 'flex';
+        container.style.width = `${imageCount * 100}%`;
+        
+        // عكس ترتيب النقاط في الـ DOM
+        if (dotsContainer) {
+            dots.reverse().forEach(dot => dotsContainer.appendChild(dot));
+        }
+        
+        updateSliderPosition();
 
         // Touch events for mobile
         imagesContainer.addEventListener('touchstart', (e) => {
             startX = e.touches[0].clientX;
             isDragging = true;
-            container.style.transition = 'none'; // Remove transition during drag
+            container.style.transition = 'none';
         });
 
         imagesContainer.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
             moveX = e.touches[0].clientX;
             const diff = moveX - startX;
-            const translateX = -currentIndex * (100 / imageCount) + (diff / imagesContainer.offsetWidth) * 100;
+            const translateX = -currentIndex * 100 + (diff / imagesContainer.offsetWidth) * 100;
             container.style.transform = `translateX(${translateX}%)`;
         });
 
         imagesContainer.addEventListener('touchend', (e) => {
             if (!isDragging) return;
             isDragging = false;
-            container.style.transition = 'transform 0.3s ease'; // Restore transition
+            container.style.transition = 'transform 0.3s ease';
             const diff = moveX - startX;
             
             if (Math.abs(diff) > 50) {
                 if (diff > 0 && currentIndex > 0) {
-                    // Swipe right
+                    // Swipe right - go to previous image
                     currentIndex--;
                 } else if (diff < 0 && currentIndex < imageCount - 1) {
-                    // Swipe left
+                    // Swipe left - go to next image
                     currentIndex++;
                 }
             }
@@ -266,7 +276,7 @@ function setupImageSliders() {
         imagesContainer.addEventListener('mousedown', (e) => {
             startX = e.clientX;
             isDragging = true;
-            container.style.transition = 'none'; // Remove transition during drag
+            container.style.transition = 'none';
             e.preventDefault();
         });
 
@@ -274,22 +284,22 @@ function setupImageSliders() {
             if (!isDragging) return;
             moveX = e.clientX;
             const diff = moveX - startX;
-            const translateX = -currentIndex * (100 / imageCount) + (diff / imagesContainer.offsetWidth) * 100;
+            const translateX = -currentIndex * 100 + (diff / imagesContainer.offsetWidth) * 100;
             container.style.transform = `translateX(${translateX}%)`;
         });
 
         imagesContainer.addEventListener('mouseup', (e) => {
             if (!isDragging) return;
             isDragging = false;
-            container.style.transition = 'transform 0.3s ease'; // Restore transition
+            container.style.transition = 'transform 0.3s ease';
             const diff = moveX - startX;
             
             if (Math.abs(diff) > 50) {
                 if (diff > 0 && currentIndex > 0) {
-                    // Swipe right
+                    // Swipe right - go to previous image
                     currentIndex--;
                 } else if (diff < 0 && currentIndex < imageCount - 1) {
-                    // Swipe left
+                    // Swipe left - go to next image
                     currentIndex++;
                 }
             }
@@ -297,28 +307,12 @@ function setupImageSliders() {
             updateSliderPosition();
         });
 
-        imagesContainer.addEventListener('mouseleave', () => {
-            if (isDragging) {
-                isDragging = false;
-                container.style.transition = 'transform 0.3s ease'; // Restore transition
-                updateSliderPosition();
-            }
-        });
-
-        // Dot indicators click
-        dots.forEach((dot, index) => {
-            dot.addEventListener('click', () => {
-                currentIndex = index;
-                updateSliderPosition();
-            });
-        });
-
         function updateSliderPosition() {
-            container.style.transform = `translateX(-${currentIndex * (100 / imageCount)}%)`;
+            container.style.transform = `translateX(-${currentIndex * 100}%)`;
             
-            // Update dots
+            // Update dots (now in reversed order)
             dots.forEach((dot, index) => {
-                if (index === currentIndex) {
+                if ((imageCount - 1 - index) === currentIndex) {
                     dot.classList.add('active');
                 } else {
                     dot.classList.remove('active');
