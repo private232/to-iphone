@@ -1,13 +1,13 @@
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: 'AIzaSyCQd2QmmDl7dTW9xgurON5uiOp5rTn0S_c',
-    authDomain: 'points-d6cfb.firebaseapp.com',
-    projectId: 'points-d6cfb',
-    storageBucket: 'points-d6cfb.firebasestorage.app',
-    messagingSenderId: '832909125676',
-    appId: '1:832909125676:web:7dcc2e47ad16657cf9c989',
-    measurementId: 'G-XL96X9KSMZ',
-    databaseURL: 'https://points-d6cfb-default-rtdb.firebaseio.com/'
+    apiKey: 'AIzaSyALJkV22o-8iVRj1UfEBgzjF0_uCc88Bus',
+    appId: '1:604464445362:web:50fc15dba3580bb92e16ab',
+    messagingSenderId: '604464445362',
+    projectId: 'new-points-854d6',
+    authDomain: 'new-points-854d6.firebaseapp.com',
+    databaseURL: 'https://new-points-854d6-default-rtdb.firebaseio.com',
+    storageBucket: 'new-points-854d6.firebasestorage.app',
+    measurementId: 'G-LZX2BWYQ44',
 };
 
 // Initialize Firebase
